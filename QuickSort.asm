@@ -7,6 +7,7 @@ buffer:		.space 1024
 .globl main
 
 main:
+# Read data from file, return number of elements at $s1 and array at $t0
 	jal ReadFile
 	
 # Initialize arguments	
@@ -18,20 +19,20 @@ main:
 	
 	jal QuickSort		# Call QuickSort function
 	
-	addi $a2, $a2, 1		# array_size
-	
+# Write data to file, array is save at $a0
 	jal WriteFile
 	
-	j exitProgram			# End program
+# End program
+	j exitProgram
 	
 #****************************************** ReadFile Implementation ******************************************# 
 ReadFile:
-	add $s7, $ra, 0
+	add $s7, $ra, 0		# Store $ra at $s7
 # Open file
 	li $v0, 13		# System call: 13 = open file
-	la $a0, fin		# a0 = name of file to read
-	add $a1, $0, $0		# a1: open mode: 0 = read
-	add $a2, $0, $0		# a2: ignore mode = 0
+	la $a0, fin		# $a0 = name of file to read
+	add $a1, $0, $0		# $a1: open mode: 0 = read
+	add $a2, $0, $0		# $a2: ignore mode = 0
 	syscall			# Open File, $v0<-fd (file descriptor)
 	add $s0, $v0, $0		# Store fd in $s0
 	
@@ -40,21 +41,21 @@ ReadFile:
 	li $t2, 1		# Initialize "base" variable
 	li $t3, 0		# Initialize "sum" variable
 	
-	add $t9, $0, 1
-	jal ReadNumberOfElements
-	move $s1, $v0		# s1 = v0 = number of elements
+	add $t9, $0, 1		# Mode read: 1 = number of elements
+	jal ReadNumberOfElements	# Call function to read number of elements
+	move $s1, $v0		# $s1 = $v0 = number of elements
 	
-	addi $t9, $t9, 1
-	jal ReadElements
-	la $t0, ($sp)		# t0 = v0 = array
+	addi $t9, $0, 2		# Mode read: 2 = array
+	jal ReadElements		# Call function to read array
+	la $t0, ($sp)		# $t0 = $v0 = array
 	
 # Close file
 	li 	$v0, 16 		# System call: 16 = open file 
  	move 	$a0, $s0		# Copy file descriptor to argument
  	syscall 			# Close file
 	
-	add $ra, $s7, 0
-	jr $ra
+	add $ra, $s7, 0		# Load $ra back
+	jr $ra			# Jump back to caller
 
 ReadNumber:
 	li $v0, 14 		# System call: 14 = read from file
@@ -63,102 +64,104 @@ ReadNumber:
  	li $a2, 1		# Buffer length			
  	syscall 			# Read from file
  	
- 	lb $t0, buffer
+ 	lb $t0, buffer		# Byte read save to $t0
  	
- 	beq $v0, $0, ReturnNumber
- 	beq $t0, 10, ReadNumber		# '\n'
- 	beq $t0, 13, ReturnNumber	# '\r'
- 	beq $t0, 32, ReturnNumber	# ' '
+ 	beq $v0, $0, ReturnNumber	# Handle EOF
+ 	beq $t0, 10, ReadNumber		# Handle '\n'
+ 	beq $t0, 13, ReturnNumber	# Handle '\r'
+ 	beq $t0, 32, ReturnNumber	# Handle ' '
  	
- 	addi $t0, $t0, -48		
-	addi $sp, $sp, -1	
-	sb $t0, ($sp)
+ 	addi $t0, $t0, -48	# Get number from its ASCII code	
+	addi $sp, $sp, -1	# Allocate 1 byte in stack
+	sb $t0, ($sp)		# Load $t0 to stack
 	
-	addi $t1, $t1, 1
+	addi $t1, $t1, 1		# count ++
 	
-	j ReadNumber
+	j ReadNumber		# Loop
 
+# Function to read number of elements
 ReadNumberOfElements:
-	j ReadNumber
+	j ReadNumber		
 	
 	ReadNumberOfElementsDone:
-		jr $ra
+		jr $ra		# Jump back to caller
 		
+# Function to read array
 ReadElements:
-	add $t8, $s1, 0
+	add $t8, $s1, 0		# $t8 = $s1 = number of elements
 	
 	ForLoop:
-		beq $t8, $0, ReadElementsDone
+		beq $t8, $0, ReadElementsDone	# if ($t8 ==0) break;
+		
 		j ReadNumber
 		
 		ContinueLoop:
-			sw $v0, ($sp)
-			subi $t8, $t8, 1
+			sw $v0, ($sp)		# Save number to stack
+			subi $t8, $t8, 1		# $t8 --
 			j ForLoop
 			
 	ReadElementsDone:
-		jr $ra
+		jr $ra		#Jump back to caller
 		
 ReturnNumber:
-	lb $t0, ($sp)
-	addi $sp, $sp, 1
+	lb $t0, ($sp)			# Load 1 byte from stack
+	addi $sp, $sp, 1			# Moce stack pointer to next digit
 
-	mult	$t0, $t2			# Multiple digit by base
-	mflo	$t0
+	mult $t0, $t2			# Multiple digit by base
+	mflo $t0
 
-	add	$t3, $t3, $t0		# Sum up all digits to create the number
+	add $t3, $t3, $t0		# Sum up
 	
-	addi	$t1, $t1, -1		# Decrease the "count" variable
+	addi $t1, $t1, -1		# count --
 
-	mul	$t2, $t2, 10		# Increase the position of digit
+	mul	$t2, $t2, 10		# base *= 10
 	mflo	$t2
 
-	bne $t1, $0, ReturnNumber
+	bne $t1, $0, ReturnNumber	# If (count == 0) break
 
 	addi	$sp, $sp, -4		# Set $sp to proper position
-	move	$v0, $t3
+	move	$v0, $t3			# Save number to $v0 to return
 	
 	# Restore all temporary registers
 	li	$t1, 0			# Reset "count" to 0
 	li	$t2, 1			# Reset "base" to 1
 	li	$t3, 0			# Reset "sum" to 0
 	
-	beq $t9, 1, ReadNumberOfElementsDone
-	beq $t9, 2, ContinueLoop
-
+	beq $t9, 1, ReadNumberOfElementsDone	# If Mode read = 1, go to read number of elements function
+	beq $t9, 2, ContinueLoop			# If Mode read = 1, go to read array function
+ 
 #****************************************** WriteFile Implementation ******************************************#
 WriteFile:
-	add $sp, $sp, -12
+	add $sp, $sp, -12	# Initialize stack to save arguments
 	sw $a0, 0($sp)
-	sw $a2, 4($sp)
-	sw $ra, 8($sp)
+	sw $s1, 4($sp)
+	sw $ra, 8($sp)		# Store return address
 	
 # Open file
 	li $v0, 13		# System call: 13 = open file
-	la $a0, fout		# a0 = name of file to write
-	addi $a1, $0, 1		# a1: open mode: 1 = write
-	add $a2, $0, $0		# a2: ignore mode = 0
+	la $a0, fout		# $a0 = name of file to write
+	addi $a1, $0, 1		# $a1: open mode: 1 = write
+	add $a2, $0, $0		# $a2: ignore mode = 0
 	syscall			# Open File, $v0<-fd (file descriptor)
 	add $s2, $v0, $0		# Store fd in $s2
 
 # Print 
-	add $t1, $0, 0		# t1 = i = 0
+	add $t1, $0, 0		# $t1 = i = 0
 	LoopPrint:
-		lw $a2, 4($sp)
-		lw $a0, 0($sp)
+		lw $a0, 0($sp)		# Load array address back to $a0
 		
-		beq $t1, $a2, EndPrint	# if (i == array_size) break; 
+		beq $t1, $s1, EndPrint	# if (i == array_size) break; 
 		
 		sll $t2, $t1, 2		# t2 = i * 4
 		add $t2, $a0, $t2	# t2 = array + 4*i
 		lw $s3, 0($t2)		# s3 = &array[i]
 		
-		la $t3, buffer
+		la $t3, buffer	
 		add $t4, $0, $0		# t4: number of digits
 		
 		jal IntToString
 		
-		add $t1, $t1, 1
+		add $t1, $t1, 1		# i++
 		
 		# Print number to file
 		li $v0, 15   			# System call for write to file
@@ -171,21 +174,21 @@ WriteFile:
 		j LoopPrint	
 		
 IntToString:
-	sub $t3, $t3, 1
+	sub $t3, $t3, 1			# Move $t3 to next digit
 	
-	add $t5, $0, 10
-	div $s3, $t5
-	mflo $s3				# $t2 holds new value after being divided (Quotient)
-	mfhi $t5				# $t5 holds Remainder
+	add $t5, $0, 10			# base = 0
+	div $s3, $t5	
+	mflo $s3				# $s3 holds new value after being divided (Quotient)
+	mfhi $t5				# $t5 holds Remainder (number to convert)
 	
 	add $t5, $t5, '0'		# Change digit into ASCII code
-	sb $t5, ($t3)
+	sb $t5, ($t3)			# Push that string into $t3 (buffer)
 	
-	addi $t4, $t4, 1
+	addi $t4, $t4, 1			# number of digits ++
 
-	bne $s3, $0, IntToString
+	bne $s3, $0, IntToString		# if not finish that number, loop
 	
-	beq $t1, 0, IntToStringDone
+	beq $t1, 0, IntToStringDone	# if it is the first number of array, do not add backspace
 	
 	# Add backspace
 	sub $t3, $t3, 1
@@ -194,7 +197,7 @@ IntToString:
 	addi $t4, $t4, 1
 	
 	IntToStringDone:
-		jr $ra	
+		jr $ra			# Jump back to caller
 
 EndPrint:
 # Close file
@@ -202,11 +205,11 @@ EndPrint:
  	move 	$a0, $s0		# Copy file descriptor to argument
  	syscall 			# Close file
  	
-	lw $a0, 0($sp)
-	lw $a2, 4($sp)
+	lw $a0, 0($sp)		# Load argurment saved in stack back to register 
+	lw $s1, 4($sp)		
 	lw $ra, 8($sp)
-	add $sp, $sp, 12
-	jr $ra
+	add $sp, $sp, 12		# Free stack
+	jr $ra			# Jump back to caller
 
 #****************************************** QuickSort Implementation ******************************************# 
 # Swap: swap(int *array, int x, int y)
@@ -319,11 +322,12 @@ partition:
 
 # Quick Sort: QuickSort(int *array, int low, int high)
 QuickSort:
-	add $sp, $sp, -16	# Initialize stack to save arguments
+	add $sp, $sp, -20	# Initialize stack to save arguments
 	sw $a0, 0($sp)		# Store arguments to stack
 	sw $a1, 4($sp)		
 	sw $a2, 8($sp)		
-	sw $ra, 12($sp)		# Store return address
+	sw $s1, 12($sp)		# Store number of elements
+	sw $ra, 16($sp)		# Store return address
 	
 	bge $a1, $a2, EndQuickSort	# if (left <= right) End QuickSort
 
@@ -342,8 +346,9 @@ QuickSort:
 		lw $a0, 0($sp)		# Load argurment saved in stack back to register 
 		lw $a1, 4($sp)	
 		lw $a2, 8($sp)		
-		lw $ra, 12($sp)	
-		addi $sp, $sp, 16	# Free stack
+		lw $s1, 12($sp)
+		lw $ra, 16($sp)
+		addi $sp, $sp, 20	# Free stack
 		jr $ra			# Jump back to caller	
 
 #****************************************** End Program Function ******************************************# 
