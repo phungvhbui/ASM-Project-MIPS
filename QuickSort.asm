@@ -1,6 +1,6 @@
 .data	# Declare variables
-fin: 		.asciiz "E:/Github/KTMTHN-MIPS/input.txt"
-fout: 		.asciiz "E:/Github/KTMTHN-MIPS/output.txt"
+fin: 		.asciiz "E:/Github/KTMTHN-MIPS/input_sort.txt"
+fout: 		.asciiz "E:/Github/KTMTHN-MIPS/output_sort.txt"
 buffer:		.space 1024
 
 .text	# Start code section
