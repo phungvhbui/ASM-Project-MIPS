@@ -19,8 +19,8 @@ space:		.asciiz " "
 
 main:
 
-#input array
-
+#Input array
+#Nhap so phan tu cua Array
 input_num_array:	
 	addi $v0,$0,4
 	la $a0,arraynum
@@ -32,6 +32,8 @@ input_num_array:
 	blez $t0,input_num_array
 	
 	move $s0,$sp
+	
+#Nhap tung phan tu cua Array
 input_array:
 	addi $s1,$s1,1
 	
@@ -48,6 +50,7 @@ input_array:
 	bne $s1,$t0,input_array
 
 #print request
+#In ra Menu
 print_request:
 	addi $v0,$0,4
 	la $a0,request1
@@ -78,6 +81,7 @@ print_request:
 	syscall
 	
 #read request
+#Doc yeu cau cua nguoi dung, va thuc hien yeu cau do
 	addi $v0,$0,5
 	syscall
 	add $s2, $0 ,$v0
@@ -91,10 +95,12 @@ print_request:
 	beq $s2,5,func_request5
 	beq $s2,6,func_request6
 
-func_request1:#t1
+#Yeu cau 1:
+func_request1:
 	addi $v0,$0,4
 	la $a0,request1_out
 	syscall
+#Thuc hien vong lap in ra toan bo phan tu
 loop7:
 	addi $s1,$s1,1
 	
@@ -112,11 +118,13 @@ loop7:
 	
 	bne $s1,$t0,loop7
 	j print_request
-			
-func_request2:#t2,t3
+	
+#Yeu cau 2:		
+func_request2:
 	addi $v0,$0,4
 	la $a0,request2_out
 	syscall
+#Thuc hien viec duyet qua toan bo phan tu trong mang va tinh tong
 loop6:
 	addi $s1,$s1,1
 	
@@ -133,17 +141,19 @@ loop6:
 	
 	j print_request
 	
-
+#Yeu cau 3:
 func_request3:
 	addi $v0,$0,4
 	la $a0,request3_out
 	syscall
+#Duyet toan bo phan tu trong mang
 loop2:
 	addi $s1,$s1,1
 	
 	lw $t2,($sp)
 	sub $t7,$t2,1
 	addi $t3,$0,1
+#Kiem tra mot phan tu co phai so nguyen to hay khong
 is_prime:
 	beq $t2,2,output_prime
 	blt $t2,2,continue
@@ -152,11 +162,13 @@ is_prime:
 	beqz $t6,continue
 	bne $t3,$t7,is_prime
 	j output_prime
+#Thuc hien viec duyet qua phan tu tiep theo neu phan tu khong thoa dieu kien
 continue:
 	addi $sp,$sp,-4
 	
 	bne $s1,$t0,loop2
 	j print_request	
+#Xuat ra cac gia tri la so nguyen to
 output_prime:
 	addi $v0,$0,1
 	move $a0,$t2
@@ -168,8 +180,8 @@ output_prime:
 	
 	j continue
 
+#Yeu cau 4:
 func_request4:
-	
 	addi $v0,$0,4
 	la $a0,request4_out
 	syscall
@@ -195,8 +207,8 @@ assignment:
 	add $t5,$0,$t4
 	j loop1
 	
+#Yeu cau 5:
 func_request5:
-
 	addi $v0,$0,4
 	la $a0,request5_in
 	syscall
@@ -224,6 +236,7 @@ loop5:
 		
 	j print_request
 	
+#Yeu cau 6:
 func_request6:
 	li $v0,10
 	syscall 
